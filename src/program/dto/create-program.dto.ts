@@ -8,14 +8,14 @@ import { IsInt, IsPositive, IsString, Matches, MinLength } from "class-validator
 export class CreateProgramDto {
     @IsString()
     @MinLength(3)
-        name: string;
+    name: string;
 
     @Matches(/^[A-Z]{3,6}$/, { message: 'code must be 3 to 6 uppercase letters' })
-        code: string;
+    code: string;
 
     @IsInt()
     @IsPositive()
-        credits: number;
+    credits: number;
 
 
 

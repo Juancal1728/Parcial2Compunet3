@@ -7,6 +7,7 @@ import { PaginationDto } from '../student/dto/pagination.dto';
 import { User } from '../user/entities/user.entity';
 import { AssignStudentsDto } from './dto/assign-students.dto';
 import { Student } from '../student/entities/student.entity';
+import { BulkCreateProgramDto } from './dto/bulk-create-program.dto';
 
 @Injectable()
 export class ProgramService {
@@ -24,14 +25,16 @@ export class ProgramService {
     //   - nombre o código repetido -> 409 Conflict (no 500)
 
     async create(createProgramDto: CreateProgramDto, user:User) {
-        const program = this.programRepository.create({
-            ...createProgramDto,
-            createdBy: user
-        });
-        await this.programRepository.save(program);
-        return program;
-    }catch(error) {
-        this.handleException(error);
+        try {
+            const program = this.programRepository.create({
+                ...createProgramDto,
+                createdBy: user
+            });
+            await this.programRepository.save(program);
+            return program;
+        } catch (error) {
+            this.handleException(error);
+        }
     }
 
     async findAll(paginationDto: PaginationDto){
@@ -98,6 +101,26 @@ export class ProgramService {
 }
     // TODO Reto 3: bulkCreate(bulkCreateProgramDto, user) -> crea todos los programas o ninguno
     //   (transacción). Cualquier nombre/código repetido -> 409 y rollback.
+
+    async bulkCreate(bulkCreateProgramDto: BulkCreateProgramDto, user: User) {
+    const queryRunner = this.datasource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+    const programs = bulkCreateProgramDto.programs.map((dto) =>
+        queryRunner.manager.create(Program, { ...dto, createdBy: user }),
+    );
+    await queryRunner.manager.save(programs);
+    await queryRunner.commitTransaction();
+    return programs;
+    } catch (error) {
+    await queryRunner.rollbackTransaction();
+    this.handleException(error);
+    } finally {
+    await queryRunner.release();
+    }
+}
 
 
 

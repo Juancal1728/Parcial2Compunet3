@@ -12,6 +12,6 @@ export class BulkCreateProgramDto {
     @ArrayNotEmpty()
     @ValidateNested({ each: true })
     @Type(() => CreateProgramDto)
-    programs: CreateProgramDto[];
+programs: CreateProgramDto[] = [];
 
 }

@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, Logger, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, OnModuleInit, Logger, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { Register } from './dto/register.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -7,9 +7,10 @@ import bcrypt from "bcrypt";
 import { Login } from './dto/login.dto';
 import { JwtPayload } from './interfaces/jwt.interface';
 import { JwtService } from '@nestjs/jwt';
+import { ValidRoles } from './enums/valid-roles.enum';
 
 @Injectable()
-export class UserService {
+export class UserService implements OnModuleInit {
   private readonly logger = new Logger("UserService");
   
   constructor(
@@ -17,6 +18,32 @@ export class UserService {
     private readonly userRepository : Repository<User>,
     private jwtService: JwtService
   ){}
+
+  async onModuleInit() {
+    const email = (process.env.ADMIN_EMAIL ?? 'admin@icesi.edu.co').toLowerCase().trim();
+    const existing = await this.userRepository.findOne({ where: { email } });
+
+    if (existing) {
+      if (!existing.roles.includes(ValidRoles.admin)) {
+        await this.userRepository.update(existing.id, { roles: [...existing.roles, ValidRoles.admin] });
+        this.logger.log(`Granted admin role to ${email}`);
+      }
+      return;
+    }
+
+    const password = process.env.ADMIN_PASSWORD;
+    if (!password) return;
+
+    await this.userRepository.save(
+      this.userRepository.create({
+        email,
+        fullName: 'Admin Icesi',
+        password: this.encryptPassword(password),
+        roles: [ValidRoles.admin],
+      }),
+    );
+    this.logger.log(`Created admin user ${email}`);
+  }
 
   async create(registerDto: Register) {
     const {password, ...userDetails} = registerDto;

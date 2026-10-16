@@ -8,6 +8,6 @@ export class AssignStudentsDto {
     @IsArray()
     @ArrayNotEmpty()
     @IsUUID('all', { each: true })
-        studentIds: string[];
+    studentIds: string[];
 
 }
